@@ -41,7 +41,6 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Console.cs" />
     <Compile Include="Core.cs" />
     <Compile Include="Crypt.cs" />
     <Compile Include="Hardware.cs" />
