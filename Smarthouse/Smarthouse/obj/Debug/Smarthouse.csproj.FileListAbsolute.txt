@@ -1,5 +1,5 @@
+C:\Users\Smirnyaga\GoogleDrive\code\GitHub\Smarthouse\Smarthouse\Smarthouse\obj\Debug\Smarthouse.exe
+C:\Users\Smirnyaga\GoogleDrive\code\GitHub\Smarthouse\Smarthouse\Smarthouse\obj\Debug\Smarthouse.pdb
 C:\Users\Smirnyaga\GoogleDrive\code\GitHub\Smarthouse\Smarthouse\Smarthouse\bin\Debug\Smarthouse.exe
 C:\Users\Smirnyaga\GoogleDrive\code\GitHub\Smarthouse\Smarthouse\Smarthouse\bin\Debug\Smarthouse.pdb
 C:\Users\Smirnyaga\GoogleDrive\code\GitHub\Smarthouse\Smarthouse\Smarthouse\obj\Debug\Smarthouse.csprojResolveAssemblyReference.cache
-C:\Users\Smirnyaga\GoogleDrive\code\GitHub\Smarthouse\Smarthouse\Smarthouse\obj\Debug\Smarthouse.exe
-C:\Users\Smirnyaga\GoogleDrive\code\GitHub\Smarthouse\Smarthouse\Smarthouse\obj\Debug\Smarthouse.pdb

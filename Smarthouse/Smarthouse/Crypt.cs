@@ -5,7 +5,7 @@ using System.Text;
 
 namespace Smarthouse
 {
-    class Crypt
+    class Crypt 
     {
     }
 }
