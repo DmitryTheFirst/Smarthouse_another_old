@@ -10,7 +10,7 @@ namespace Smarthouse
     {
         static void Main(string[] args)
         {
-
+            //Just installed win 8.1(from msdn, yaay!). Configuring git
             System.Console.WriteLine("Hello world!");
             //init core
             Core core;
