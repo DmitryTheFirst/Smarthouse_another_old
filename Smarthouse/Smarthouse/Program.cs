@@ -17,8 +17,9 @@ namespace Smarthouse
             core.Start();
             do
             {
-                //System.Console.WriteLine("I'm alive! Main thread!");//lol. Don't write Console.WriteLine... Or it will be funny overflow exception :D
+                System.Console.WriteLine("Main");
                 Thread.Sleep(10000);
+                core.Stop();
             }while(true);
         }
     }
