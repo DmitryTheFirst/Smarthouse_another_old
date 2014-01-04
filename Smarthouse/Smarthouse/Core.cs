@@ -16,12 +16,12 @@ namespace Smarthouse
             //Init other classes
             test = new Test();
             //watching all's status, doing smth interesting
+            test.Start();
             do
             {
                 Console.WriteLine("Main thread!");
-                Thread.Sleep(3000);
-                test.Stop();
-                test.Start();
+                Thread.Sleep(10000);
+                
             } while (true);
         }
     }

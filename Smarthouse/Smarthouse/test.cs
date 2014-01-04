@@ -20,7 +20,6 @@ namespace Smarthouse
             length = init_length;
             main_thread = new Thread(delegate() { writeOut(); });
         }
-
         public void Start()
         {
             if (main_thread == null) { main_thread = new Thread(delegate() { writeOut(); }); }
@@ -34,12 +33,10 @@ namespace Smarthouse
                 main_thread = null;
             }
         }
-
         public void ChangeLength(byte newLength)
         {
             length = newLength;
         }
-
         public void writeOut()
         {
             do
