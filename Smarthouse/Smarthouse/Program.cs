@@ -13,9 +13,8 @@ namespace Smarthouse
             //Just installed win 8.1(from msdn, yaay!). Configuring git
             System.Console.WriteLine("Hello world!");
             //init core
-            Core core;
-            Thread core_thread = new Thread(delegate() { core = new Core(); });
-            core_thread.Start();
+            Core core = new Core();
+            core.Start();
             do
             {
                 //System.Console.WriteLine("I'm alive! Main thread!");//lol. Don't write Console.WriteLine... Or it will be funny overflow exception :D
