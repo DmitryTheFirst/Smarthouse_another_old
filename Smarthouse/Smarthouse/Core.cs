@@ -7,19 +7,21 @@ using System.Threading;
 namespace Smarthouse
 {
     class Core
-    {
+    { 
+        public Test test;
         public Core()
         {
+            Random rnd = new Random();
             //Download smth from cfgs
             //Init other classes
-            Console console;
-            Thread console_thread = new Thread(delegate() { console = new Console(); });
-            console_thread.Start();
+            test = new Test();
             //watching all's status, doing smth interesting
             do
             {
-                System.Console.WriteLine("Core thread!");
-                Thread.Sleep(10000);
+                Console.WriteLine("Main thread!");
+                Thread.Sleep(3000);
+                test.Stop();
+                test.Start();
             } while (true);
         }
     }

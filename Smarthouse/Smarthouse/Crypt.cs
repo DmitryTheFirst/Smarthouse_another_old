@@ -7,5 +7,6 @@ namespace Smarthouse
 {
     class Crypt 
     {
+
     }
 }
