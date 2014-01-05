@@ -35,10 +35,18 @@ namespace Smarthouse
             test = new Test();
             client = new Network("127.0.0.1",31337);
             server = new Network(31337);
-            
+
+            UserDomain ud = new UserDomain();
+            ud.AddUser("stranger", "12345", "some guy");
+            ud.AddUser("stranger1", "123456", "some guy");
+            ud.AddUser("Smirnyaga", "hard_pass", "some guy");
+            ud.RemoveUser("stranger1");
+            ud.ChangeUserPass("stranger1", "1234553426");
+            ud.ChangeUserPass("Smirnyaga", "1234553426");
+            Console.WriteLine(ud.Count());
             //test.Start();
-            server.Start();
-            client.Start();
+            //server.Start();
+            //client.Start();
             
         }
         void watch()
