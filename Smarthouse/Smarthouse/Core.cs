@@ -15,34 +15,38 @@ namespace Smarthouse
         #endregion
         #region Processes
         public Test test;
+        public Network client;
+        public Network server;
         #endregion
         public Core()
         {
             start_main = new ThreadStart(doCoreStuff);
             main_thread = new Thread(start_main);
         }
-
         void doCoreStuff()
         {
             init();
             watch();
         }
-
-       
         void init()
         { 
             //Download smth from cfgs
             //Init other classes 
             test = new Test();
+            client = new Network("127.0.0.1",31337);
+            server = new Network(31337);
+            
+            //test.Start();
+            server.Start();
+            client.Start();
+            
         }
-
         void watch()
         {
             //watching all's status, doing smth interesting
-            test.Start();
             do
             {
-                Console.WriteLine("Core!");
+                Console.WriteLine("Core! Core!");
                 Thread.Sleep(1000);
             } while (isWorking);
         }

@@ -17,9 +17,8 @@ namespace Smarthouse
             core.Start();
             do
             {
-                System.Console.WriteLine("Main");
+                System.Console.WriteLine("Main! Main!");
                 Thread.Sleep(10000);
-                core.Stop();
             }while(true);
         }
     }
