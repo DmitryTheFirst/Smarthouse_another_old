@@ -17,6 +17,10 @@ namespace Smarthouse
         public Test test;
         public Network client1;
         public Network client2;
+        public Network client3;
+        public Network client4;
+        public Network client5;
+        public Network client6;
         public Network server;
         public UserDomain ud;
         #endregion
@@ -35,8 +39,13 @@ namespace Smarthouse
             //Download smth from cfgs
             //Init other classes 
             test = new Test();
-            client1 = new Network("127.0.0.1", 31337, "Smirnyaga");
-            client2 = new Network("127.0.0.1", 31337, "stranger1");
+            client1 = new Network("127.0.0.1", 31337, "Smirnyaga", "hard_pass");
+            client2 = new Network("127.0.0.1", 31337, "stranger1", "123456");
+            client3 = new Network("127.0.0.1", 31337, "stranger", "12345");
+            client4 = new Network("127.0.0.1", 31337, "Smirnyaga", "hard_pass");
+            client5 = new Network("127.0.0.1", 31337, "stranger1", "123456");
+            client6 = new Network("127.0.0.1", 31337, "stranger", "12345");
+
             server = new Network(31337);
 
             ud = new UserDomain();
@@ -48,6 +57,10 @@ namespace Smarthouse
             server.Start();
             client1.Start();
             client2.Start();
+            client3.Start();
+            client4.Start();
+            client5.Start();
+            client6.Start();
             
         }
         void watch()

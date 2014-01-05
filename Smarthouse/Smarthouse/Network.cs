@@ -6,6 +6,8 @@ using System.Threading;
 using System.Net;
 using System.Net.Sockets;
 using System.Security.Cryptography;
+using System.Collections.Concurrent;
+
 
 namespace Smarthouse
 {
@@ -13,6 +15,8 @@ namespace Smarthouse
     {
 
         const byte append_length = 4;//uint - 32 bytes
+        const byte md5_length = 32;// md5 hash is always 32 symbols length
+
 
         bool isWorking = false;
 
@@ -22,9 +26,14 @@ namespace Smarthouse
 
 
         #region Server
-        Dictionary<string, Session> sessions = new Dictionary<string, Session>();
+
+
+
+        ConcurrentDictionary<string, Session> sessions = new ConcurrentDictionary<string, Session>();
         Random rnd;
         Socket reciever;
+        //string check_key;
+
         public Network(int port)
         {
             rnd = new Random();
@@ -35,7 +44,6 @@ namespace Smarthouse
             reciever.Bind(myEP);
             reciever.Listen(10);
         }
-
         void endAccept(System.IAsyncResult ar)
         {
             Socket sck = reciever.EndAccept(ar);//now sck is our socket connected to client
@@ -55,23 +63,40 @@ namespace Smarthouse
         bool auth(Socket sck)
         {
             bool success = false;
+            User user;
 
-            string login = recieveLogin(sck); 
-            uint append = (uint)(rnd.Next(int.MinValue, int.MaxValue) + int.MaxValue); // Generate append
+            string login = recieveLogin(sck);
+            uint append = (uint)(rnd.Next(int.MinValue, int.MaxValue) + int.MaxValue);  // Generate append 
+
+
             #region Adding login to the sessions
-            try
+            if (Smarthouse.Program.core.ud.Contains(login))
             {
-                if (Smarthouse.Program.core.ud.Contains(login))
+                user = Smarthouse.Program.core.ud.GetUser(login);
+
+                if (!sessions.TryAdd(login, new Session(append, sck, new Crypt(append, user.Pass))))
                 {
-                    sessions.Add(login,
-                        new Session(append, sck,
-                            new Crypt(append, Smarthouse.Program.core.ud.GetUser(login).Pass)));
+                    Console.WriteLine("Error! Already on the session list"); return false;
                 }
             }
-            catch { Console.WriteLine("Error! Already on the session list"); };
+            else
+            {
+                Console.WriteLine("Error! No such user!"); return false;
+            }
             #endregion
-            sendAppend(sck, append); //send append
 
+
+            sendAppend(sck, append);                                                    //send append
+
+
+            if (check(sck, generateCheckKey(user.Pass, append)))
+            {
+                Console.WriteLine(login + " acces granted!");
+            }
+            else
+            {
+                Console.WriteLine(login + " wrong password!");
+            }
             return success;
         }
         string recieveLogin(Socket sck)
@@ -86,47 +111,61 @@ namespace Smarthouse
         {
             sck.Send(BitConverter.GetBytes(append));//sending login
         }
+        bool check(Socket sck, string check_key)
+        {
+            byte[] recieved_check_key = new byte[md5_length];
+            sck.Receive(recieved_check_key);
+            return Encoding.UTF8.GetString(recieved_check_key) == check_key;
+        }
+
+
+
         #endregion
 
-
-
         #region Client
-        Socket sck;
-        string login;
 
-        public Network(string ip, int port, string login)
+
+
+        Socket sck_client;
+        string login_client;
+        Crypt crypt_client;
+        uint append_client;
+        string client_password;
+
+        public Network(string ip, int port, string login, string password)
         {
             server = false;
             server_ip = IPAddress.Parse(ip);
+            client_password = password;
             this.port = port;
-            this.login = login;
-            sck = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+            login_client = login;
+            sck_client = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
 
         }
-
         void endConnect(System.IAsyncResult ar)
         {
-            sck.EndConnect(ar);
+            sck_client.EndConnect(ar);
             //authorization
-            if (auth(login))
+            if (auth(login_client))
             {
-               // Console.WriteLine("Yaay!");
+                // Console.WriteLine("Yaay!");
             }
             else
             {
-               // Console.WriteLine("Boo!");
+                // Console.WriteLine("Boo!");
             }
         }
-
         bool auth(string login)
         {
             bool success = false;
-            sendLogin(sck, login);
-            uint append = recieveAppend(sck); 
+            sendLogin(sck_client, login);               //sending login
+            append_client = recieveAppend(sck_client);   //recieve append
+            crypt_client = new Crypt(append_client, client_password);//create Crypt object
+            sendCheckKey(sck_client, generateCheckKey(client_password, append_client)); //send generated key
+
 
             return success;
         }
-
         void sendLogin(Socket sck, string login)
         {
             sck.Send(new byte[] { (byte)login.Length });//sending login's length
@@ -138,10 +177,20 @@ namespace Smarthouse
             sck.Receive(append_buff);//recieving login
             return BitConverter.ToUInt32(append_buff, 0);
         }
+
+        void sendCheckKey(Socket sck, string checkkey)
+        {
+            sck.Send(Encoding.UTF8.GetBytes(checkkey));//sending check key
+        }
+
+
         #endregion
 
 
-
+        string generateCheckKey(string pass, uint append)
+        {
+            return Crypt.MD5(Crypt.MD5(pass) + Crypt.MD5(append.ToString()));
+        }
 
 
 
@@ -157,7 +206,7 @@ namespace Smarthouse
                 }
                 else
                 {
-                    sck.BeginConnect(server_ip, port, endConnect, null);
+                    sck_client.BeginConnect(server_ip, port, endConnect, null);
                 }
             }
         }

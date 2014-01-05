@@ -61,14 +61,7 @@ namespace Smarthouse
 
         public User GetUser(string login)
         {
-            try
-            {
-                return users[login];
-            }
-            catch (System.Collections.Generic.KeyNotFoundException)
-            {
-                return null;
-            }
+                return users[login];   
         }
 
         public bool Contains(string login)
