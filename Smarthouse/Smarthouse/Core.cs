@@ -43,8 +43,6 @@ namespace Smarthouse
             client2 = new Network("127.0.0.1", 31337, "stranger1", "123456");
             client3 = new Network("127.0.0.1", 31337, "stranger", "12345");
             client4 = new Network("127.0.0.1", 31337, "Smirnyaga", "hard_pass");
-            client5 = new Network("127.0.0.1", 31337, "stranger1", "123456");
-            client6 = new Network("127.0.0.1", 31337, "stranger", "12345");
 
             server = new Network(31337);
 
@@ -59,8 +57,6 @@ namespace Smarthouse
             client2.Start();
             client3.Start();
             client4.Start();
-            client5.Start();
-            client6.Start();
             
         }
         void watch()

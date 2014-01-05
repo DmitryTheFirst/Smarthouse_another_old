@@ -12,12 +12,9 @@ namespace Smarthouse
         string key;
         public Crypt(uint append, string password)
         {
-            // key = MD5(MD5(password+append)+crypto_const);
+            key = MD5(MD5(password+append)+crypto_const);
         }
-        public Crypt()
-        {
-            // key = MD5(MD5(password+append)+crypto_const);
-        }
+        
 
         public static string MD5(string s)
         {
