@@ -8,7 +8,7 @@ namespace Smarthouse
     class UserDomain
     {
         Dictionary<string, User> users = new Dictionary<string, User>();
-        enum Statuses : byte { None = 0, Net = 1 };
+        public enum Statuses : byte { None = 0, Net = 1 };
 
         public bool AddUser(string login, string pass, string about)
         {

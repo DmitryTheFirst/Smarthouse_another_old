@@ -45,19 +45,25 @@ namespace Smarthouse
             Socket sck = reciever.EndAccept(ar);//now sck is our socket connected to client
             String login;
             reciever.BeginAccept(endAccept, null);//Continue listening to other clients
-
-            //authorization
+            #region authorization
             if (auth(sck, out login))
             {
                 // Console.WriteLine("+ "+login + " acces granted!");
+                Program.core.ud.GetUser(login).Status = (byte)UserDomain.Statuses.Net;
             }
             else
             {
                 //Console.WriteLine("+ " +login + " wrong password or already connected!");
-                sck.Disconnect(false);//reject this user
+                sck.Disconnect(false);
+                sck.Close();//reject this user
+                return;
             }
+            #endregion
+            Console.WriteLine(login +" connected");
+            Console.WriteLine(sessions[login].Crypt.key);
+            Console.WriteLine("______________");
 
-            Console.WriteLine(sessions.Count);
+           // sck.BeginReceive();
         }
 
         #region Auth
@@ -79,19 +85,19 @@ namespace Smarthouse
                     #region Adding login to the sessions
                     if (!sessions.TryAdd(login, new Session(append, sck, new Crypt(append, user.Pass))))
                     {
-                        Console.WriteLine("+_______ Error! \"" + login + "\" is already on the session list.");
+                        //Console.WriteLine("+_______ Error! \"" + login + "\" is already on the session list.");
                         success = false;
                     }
                     #endregion
                 }
                 else
                 {
-                    Console.WriteLine("+_______ Error! \"" + login + "\" wrong password.");
+                    //Console.WriteLine("+_______ Error! \"" + login + "\" wrong password.");
                 }
             }
             else
             {
-                Console.WriteLine("+_______ Error! No user named \"" + login + "\"");
+                //Console.WriteLine("+_______ Error! No user named \"" + login + "\"");
                 success = false;
             }
             return success;
@@ -115,19 +121,14 @@ namespace Smarthouse
             return Encoding.UTF8.GetString(recieved_check_key) == check_key;
         }
         #endregion
-
         #endregion
 
         #region Client
-
-
-
         Socket sck_client;
         string login_client;
         Crypt crypt_client;
         uint append_client;
         string client_password;
-
         public Network(string ip, int port, string login, string password)
         {
             server = false;
@@ -143,16 +144,21 @@ namespace Smarthouse
             sck_client.EndConnect(ar);
             //authorization
 
-            if (auth(login_client))
+            if (auth(login_client) && sck_client.Connected==true)
             {
-                //Console.WriteLine("- "+login_client + " connected!");
+                //Console.WriteLine("- " + login_client + " connected!");
             }
             else
             {
-                // Console.WriteLine("- " + login_client + " failed!");
+               // Console.WriteLine("- " + login_client + " failed!"); 
             }
-        }
+            
+            Console.WriteLine(login_client);
+            Console.WriteLine(crypt_client.key);
+            Console.WriteLine("______________");
 
+
+        }
         #region Auth
         bool auth(string login)
         {
@@ -162,15 +168,9 @@ namespace Smarthouse
                 append_client = recieveAppend(sck_client);   //recieve append
                 crypt_client = new Crypt(append_client, client_password);//create Crypt object
                 sendCheckKey(sck_client, generateCheckKey(client_password, append_client)); //send generated key
-                Thread.Sleep(1000);
-                if (sck_client.Connected)//server will close connect if pass was wrong
-                {
-                    return true;
-                }
-                else
-                {
-                    return false;// if something went wrong, then it's not success
-                }
+
+                return true;
+
             }
             catch
             {
@@ -239,7 +239,7 @@ namespace Smarthouse
     {
         uint Append;
         Socket Sck;
-        Crypt Crypt;
+        public Crypt Crypt;
 
         public Session()
         {

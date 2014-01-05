@@ -9,7 +9,7 @@ namespace Smarthouse
     class Crypt
     {
         const string crypto_const = "22";//just becouse. It's not "magic", but i just want it to be there. sorry if it offends your feelings..
-        string key;
+        public string key;
         public Crypt(uint append, string password)
         {
             key = MD5(MD5(password+append)+crypto_const);
