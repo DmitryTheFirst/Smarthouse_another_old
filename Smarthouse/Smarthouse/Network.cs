@@ -47,26 +47,44 @@ namespace Smarthouse
             }
         }
 
+        bool auth(Socket sck)
+        {
+            bool succsess = false;
+            login = recieveLogin(sck);
+            Console.WriteLine("Client --" + login +"--> Server: ");
+            return succsess;
+        }
 
+        string recieveLogin(Socket sck)
+        {
+            byte[] length = new byte[1];
+            sck.Receive(length);//recieving length
+            byte[] login_buff = new byte[length[0]];
+            sck.Receive(login_buff);//recieving login
+            return Encoding.UTF8.GetString(login_buff);
+        }
         #endregion
 
 
 
         #region Client
         Socket sck;
-        public Network(string ip, int port)
+        string login;
+        public Network(string ip, int port, string login)
         {
             server = false;
             server_ip = IPAddress.Parse(ip);
             this.port = port;
+            this.login = login;
             sck = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+
         }
 
         void endConnect(System.IAsyncResult ar)
         {
             sck.EndConnect(ar);
             //authorization
-            if (auth(sck))
+            if (auth(sck, login))
             {
                 Console.WriteLine("Yaay!");
             }
@@ -75,22 +93,26 @@ namespace Smarthouse
                 Console.WriteLine("Boo!");
             }
         }
+
+        bool auth(Socket sck, string login)
+        {
+            bool succsess = false;
+            sendLogin(sck, login);
+
+            return succsess;
+        }
+
+        void sendLogin(Socket sck, string login)
+        {
+            sck.Send(new byte[] { (byte)login.Length });//sending login's length
+            sck.Send(Encoding.UTF8.GetBytes(login));//sending login
+        }
         #endregion
 
 
-        bool auth(Socket sck)
-        {
-            bool succsess = false;
-            if (server)
-            {
-                
-            }
-            else
-            {
 
-            }
-            return succsess;
-        }
+
+
 
         #region ThreadControllable
         public void Start()

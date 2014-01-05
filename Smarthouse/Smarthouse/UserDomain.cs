@@ -26,8 +26,13 @@ namespace Smarthouse
         {
             try
             {
-                users.Add(login, user);
-                return true;
+                if (login.Length <= 255 && login.Length > 0)
+                {
+                    users.Add(login, user);
+                    return true;
+                }
+                else
+                    return false;
             }
             catch (System.ArgumentException)
             {
@@ -58,7 +63,7 @@ namespace Smarthouse
         {
             try
             {
-                return  users[login];
+                return users[login];
             }
             catch (System.Collections.Generic.KeyNotFoundException)
             {

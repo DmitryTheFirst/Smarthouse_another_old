@@ -33,7 +33,7 @@ namespace Smarthouse
             //Download smth from cfgs
             //Init other classes 
             test = new Test();
-            client = new Network("127.0.0.1",31337);
+            client = new Network("127.0.0.1",31337,"Smirnyaga");
             server = new Network(31337);
 
             UserDomain ud = new UserDomain();
@@ -43,10 +43,10 @@ namespace Smarthouse
             ud.RemoveUser("stranger1");
             ud.ChangeUserPass("stranger1", "1234553426");
             ud.ChangeUserPass("Smirnyaga", "1234553426");
-            Console.WriteLine(ud.Count());
+           
             //test.Start();
-            //server.Start();
-            //client.Start();
+            server.Start();
+            client.Start();
             
         }
         void watch()
