@@ -71,6 +71,11 @@ namespace Smarthouse
             }
         }
 
+        public bool Contains(string login)
+        {
+            return users.ContainsKey(login);
+        }
+
         public int Count()
         {
             return users.Count();

@@ -11,19 +11,23 @@ namespace Smarthouse
 {
     class Network : ThreadControllable
     {
-        bool isWorking = false;
 
+        const byte append_length = 4;//uint - 32 bytes
+
+        bool isWorking = false;
 
         bool server;
         IPAddress server_ip;
         int port;
 
 
-
         #region Server
+        Dictionary<string, Session> sessions = new Dictionary<string, Session>();
+        Random rnd;
         Socket reciever;
         public Network(int port)
         {
+            rnd = new Random();
             server = true;
             server_ip = IPAddress.Any;
             reciever = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
@@ -36,25 +40,40 @@ namespace Smarthouse
         {
             Socket sck = reciever.EndAccept(ar);//now sck is our socket connected to client
             reciever.BeginAccept(endAccept, null);//Continue listening to other clients
+
             //authorization
             if (auth(sck))
             {
-                Console.WriteLine("Yaay!");
+                //Console.WriteLine("Yaay!");
             }
             else
             {
-                Console.WriteLine("Boo!");
+                //Console.WriteLine("Boo!");
             }
         }
 
         bool auth(Socket sck)
         {
-            bool succsess = false;
-            login = recieveLogin(sck);
-            Console.WriteLine("Client --" + login +"--> Server: ");
-            return succsess;
-        }
+            bool success = false;
 
+            string login = recieveLogin(sck); 
+            uint append = (uint)(rnd.Next(int.MinValue, int.MaxValue) + int.MaxValue); // Generate append
+            #region Adding login to the sessions
+            try
+            {
+                if (Smarthouse.Program.core.ud.Contains(login))
+                {
+                    sessions.Add(login,
+                        new Session(append, sck,
+                            new Crypt(append, Smarthouse.Program.core.ud.GetUser(login).Pass)));
+                }
+            }
+            catch { Console.WriteLine("Error! Already on the session list"); };
+            #endregion
+            sendAppend(sck, append); //send append
+
+            return success;
+        }
         string recieveLogin(Socket sck)
         {
             byte[] length = new byte[1];
@@ -63,6 +82,10 @@ namespace Smarthouse
             sck.Receive(login_buff);//recieving login
             return Encoding.UTF8.GetString(login_buff);
         }
+        void sendAppend(Socket sck, uint append)
+        {
+            sck.Send(BitConverter.GetBytes(append));//sending login
+        }
         #endregion
 
 
@@ -70,6 +93,7 @@ namespace Smarthouse
         #region Client
         Socket sck;
         string login;
+
         public Network(string ip, int port, string login)
         {
             server = false;
@@ -84,28 +108,35 @@ namespace Smarthouse
         {
             sck.EndConnect(ar);
             //authorization
-            if (auth(sck, login))
+            if (auth(login))
             {
-                Console.WriteLine("Yaay!");
+               // Console.WriteLine("Yaay!");
             }
             else
             {
-                Console.WriteLine("Boo!");
+               // Console.WriteLine("Boo!");
             }
         }
 
-        bool auth(Socket sck, string login)
+        bool auth(string login)
         {
-            bool succsess = false;
+            bool success = false;
             sendLogin(sck, login);
+            uint append = recieveAppend(sck); 
 
-            return succsess;
+            return success;
         }
 
         void sendLogin(Socket sck, string login)
         {
             sck.Send(new byte[] { (byte)login.Length });//sending login's length
             sck.Send(Encoding.UTF8.GetBytes(login));//sending login
+        }
+        uint recieveAppend(Socket sck)
+        {
+            byte[] append_buff = new byte[append_length];
+            sck.Receive(append_buff);//recieving login
+            return BitConverter.ToUInt32(append_buff, 0);
         }
         #endregion
 
@@ -142,5 +173,27 @@ namespace Smarthouse
             }
         }
         #endregion
+    }
+
+    class Session
+    {
+        uint Append;
+        Socket Sck;
+        Crypt Crypt;
+
+        public Session()
+        {
+            Append = 0;
+            Crypt = null;
+            Sck = null;
+        }
+
+        public Session(uint append, Socket sck, Crypt crypt)
+        {
+            Append = append;
+            Sck = sck;
+            Crypt = crypt;
+        }
+
     }
 }

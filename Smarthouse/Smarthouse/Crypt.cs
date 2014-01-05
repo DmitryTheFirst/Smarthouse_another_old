@@ -7,6 +7,10 @@ namespace Smarthouse
 {
     class Crypt 
     {
-
+        string key;
+        public Crypt(uint append, string password)
+        {
+            /////
+        }
     }
 }
