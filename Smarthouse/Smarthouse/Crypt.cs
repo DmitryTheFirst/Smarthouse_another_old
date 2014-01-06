@@ -14,8 +14,21 @@ namespace Smarthouse
         {
             key = MD5(MD5(password+append)+crypto_const);
         }
-        
 
+
+        public byte[] Encode(byte[] buff)
+        {
+
+            return buff;
+        }
+
+        public byte[] Decode(byte[] buff)
+        {
+
+            return buff;
+        }
+        
+        
         public static string MD5(string s)
         {
             MD5CryptoServiceProvider CSP = new MD5CryptoServiceProvider();
@@ -25,7 +38,6 @@ namespace Smarthouse
                 hash += string.Format("{0:x2}", b);
             return hash;
         }
-
         public static string generateCheckKey(string pass, uint append)
         {
             return Crypt.MD5(Crypt.MD5(pass) + Crypt.MD5(append.ToString()));

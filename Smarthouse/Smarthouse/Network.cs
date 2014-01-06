@@ -59,40 +59,17 @@ namespace Smarthouse
                 return;
             }
             #endregion
-            Console.WriteLine(login +" connected");
+            Console.WriteLine(login + " connected");
             Console.WriteLine(sessions[login].Crypt.key);
             Console.WriteLine("______________");
 
+            #region Begin recieve
             StateObject so = new StateObject();
             so.workSocket = sck;
             sck.BeginReceive(so.buffer, 0, StateObject.BUFFER_SIZE, SocketFlags.None, EndRecieve, so);
+            #endregion
         }
 
-        void EndRecieve(System.IAsyncResult ar)
-        {
-            //StateObject so = (StateObject)ar.AsyncState;
-            //byte pin = so.buffer[0];
-            //bool type = !(so.buffer[1] < 128);
-            //byte[] value;
-            //if (type)
-            //{
-            //    //неудача. Нас ждет анальная боль. Много байт. К хуям бесперебойность!
-            //    byte[] temp = new byte[3];
-            //    so.workSocket.Receive(temp, 0, 3, SocketFlags.None);//качаем ещё 3 бита размера
-            //    byte[] s = new byte[4] { temp[0], temp[1], temp[2], (byte)(so.buffer[1] - 128) };//здесь у нас будет храниться размер
-            //    UInt32 size = BitConverter.ToUInt32(s, 0);
-            //    value = new byte[size];
-            //    so.workSocket.Receive(value, SocketFlags.None);//принимаем невъебенно большой файл и забиваем его в value 
-            //}
-            //else
-            //{
-            //    value = new byte[] { so.buffer[1] }; //збc, всего 1 байт.
-            //}
-
-            //Smarthouse.output.SetValue(pin, value);//sending 
-
-            //so.workSocket.BeginReceive(so.buffer, 0, StateObject.BUFFER_SIZE, SocketFlags.None, EndRecieve, so); //вылетает ошибка при обрывании коннекта
-        }
 
         #region Auth
         bool auth(Socket sck, out string login)
@@ -149,6 +126,10 @@ namespace Smarthouse
             return Encoding.UTF8.GetString(recieved_check_key) == check_key;
         }
         #endregion
+        void server_process_recieved(UInt16 service, byte[] buff)
+        {
+            Console.WriteLine("Server recieved '" + Encoding.UTF8.GetString(buff) + "' for " + service + " service");
+        }
         #endregion
         #region Client
         Socket sck_client;
@@ -171,21 +152,26 @@ namespace Smarthouse
             sck_client.EndConnect(ar);
             //authorization
 
-            if (auth(login_client) && sck_client.Connected==true)
+            if (auth(login_client) && sck_client.Connected == true)
             {
                 //Console.WriteLine("- " + login_client + " connected!");
             }
             else
             {
-               // Console.WriteLine("- " + login_client + " failed!"); 
+                // Console.WriteLine("- " + login_client + " failed!"); 
             }
-            
+
             Console.WriteLine(login_client);
             Console.WriteLine(crypt_client.key);
             Console.WriteLine("______________");
-
-
+            #region Begin recieve
+            StateObject so = new StateObject();
+            so.workSocket = sck_client;
+            sck_client.BeginReceive(so.buffer, 0, StateObject.BUFFER_SIZE, SocketFlags.None, EndRecieve, so);
+            #endregion
         }
+
+
         #region Auth
         bool auth(string login)
         {
@@ -222,11 +208,53 @@ namespace Smarthouse
             sck.Send(Encoding.UTF8.GetBytes(checkkey));//sending check key
         }
         #endregion
+
+        void client_process_recieved(UInt16 service, byte[] buff)
+        {
+            Console.WriteLine("Client recieved: '" + Encoding.UTF8.GetString(buff) + "' from " + service + " service");
+        }
         #endregion
 
+        public bool Send(Socket sck, Crypt crypt, UInt16 service, byte[] buff)
+        {
+            byte[] size = new byte[5];
+            Array.Copy(BitConverter.GetBytes(buff.Length), size, 3); //Copy length to array. We need only 3 first bytes
+            BitConverter.GetBytes(service).CopyTo(size, 3);//Copy service num to array
+            try
+            {
+                sck.Send(crypt.Encode(size));
+                sck.Send(crypt.Encode(buff));
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
 
-       
+        void EndRecieve(System.IAsyncResult ar)
+        {
+            #region buffwork
+            StateObject so = (StateObject)ar.AsyncState;
+            byte[] size_buff = new byte[3];
+            Array.Copy(so.buffer, size_buff, 3);
+            int size = BitConverter.ToUInt16(so.buffer, 0);//getting size
+            byte[] buff = new byte[size];
+            #endregion
+            UInt16 service = BitConverter.ToUInt16(so.buffer, 3);//getting service num
+            so.workSocket.Receive(buff);//recieving data
 
+            if (server)
+            {
+                server_process_recieved(service,buff);
+            }
+            else
+            {
+                client_process_recieved(service, buff);
+            }
+
+            so.workSocket.BeginReceive(so.buffer, 0, StateObject.BUFFER_SIZE, SocketFlags.None, EndRecieve, so); //вылетает ошибка при обрывании коннекта
+        }
 
 
         #region ThreadControllable
@@ -262,26 +290,26 @@ namespace Smarthouse
     class StateObject
     {
         public Socket workSocket = null;
-        public const int BUFFER_SIZE = 2;
+        public const int BUFFER_SIZE = 5; //3 bytes for size and 2 bytes for service num
         public byte[] buffer = new byte[BUFFER_SIZE];
     }
 
     class Session
     {
-        uint Append;
-        Socket Sck;
+        uint append;
+        public Socket Sck;
         public Crypt Crypt;
 
         public Session()
         {
-            Append = 0;
+            append = 0;
             Crypt = null;
             Sck = null;
         }
 
         public Session(uint append, Socket sck, Crypt crypt)
         {
-            Append = append;
+            this.append = append;
             Sck = sck;
             Crypt = crypt;
         }
