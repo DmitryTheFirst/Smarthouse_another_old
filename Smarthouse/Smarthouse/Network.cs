@@ -63,7 +63,35 @@ namespace Smarthouse
             Console.WriteLine(sessions[login].Crypt.key);
             Console.WriteLine("______________");
 
-           // sck.BeginReceive();
+            StateObject so = new StateObject();
+            so.workSocket = sck;
+            sck.BeginReceive(so.buffer, 0, StateObject.BUFFER_SIZE, SocketFlags.None, EndRecieve, so);
+        }
+
+        void EndRecieve(System.IAsyncResult ar)
+        {
+            //StateObject so = (StateObject)ar.AsyncState;
+            //byte pin = so.buffer[0];
+            //bool type = !(so.buffer[1] < 128);
+            //byte[] value;
+            //if (type)
+            //{
+            //    //неудача. Нас ждет анальная боль. Много байт. К хуям бесперебойность!
+            //    byte[] temp = new byte[3];
+            //    so.workSocket.Receive(temp, 0, 3, SocketFlags.None);//качаем ещё 3 бита размера
+            //    byte[] s = new byte[4] { temp[0], temp[1], temp[2], (byte)(so.buffer[1] - 128) };//здесь у нас будет храниться размер
+            //    UInt32 size = BitConverter.ToUInt32(s, 0);
+            //    value = new byte[size];
+            //    so.workSocket.Receive(value, SocketFlags.None);//принимаем невъебенно большой файл и забиваем его в value 
+            //}
+            //else
+            //{
+            //    value = new byte[] { so.buffer[1] }; //збc, всего 1 байт.
+            //}
+
+            //Smarthouse.output.SetValue(pin, value);//sending 
+
+            //so.workSocket.BeginReceive(so.buffer, 0, StateObject.BUFFER_SIZE, SocketFlags.None, EndRecieve, so); //вылетает ошибка при обрывании коннекта
         }
 
         #region Auth
@@ -79,7 +107,7 @@ namespace Smarthouse
             {
                 user = Smarthouse.Program.core.ud.GetUser(login);
                 sendAppend(sck, append);                           //send append
-                success = check(sck, generateCheckKey(user.Pass, append)); // check key
+                success = check(sck, Crypt.generateCheckKey(user.Pass, append)); // check key
                 if (success)
                 {
                     #region Adding login to the sessions
@@ -122,7 +150,6 @@ namespace Smarthouse
         }
         #endregion
         #endregion
-
         #region Client
         Socket sck_client;
         string login_client;
@@ -167,7 +194,7 @@ namespace Smarthouse
                 sendLogin(sck_client, login);               //sending login
                 append_client = recieveAppend(sck_client);   //recieve append
                 crypt_client = new Crypt(append_client, client_password);//create Crypt object
-                sendCheckKey(sck_client, generateCheckKey(client_password, append_client)); //send generated key
+                sendCheckKey(sck_client, Crypt.generateCheckKey(client_password, append_client)); //send generated key
 
                 return true;
 
@@ -198,10 +225,7 @@ namespace Smarthouse
         #endregion
 
 
-        string generateCheckKey(string pass, uint append)
-        {
-            return Crypt.MD5(Crypt.MD5(pass) + Crypt.MD5(append.ToString()));
-        }
+       
 
 
 
@@ -233,6 +257,13 @@ namespace Smarthouse
             }
         }
         #endregion
+    }
+
+    class StateObject
+    {
+        public Socket workSocket = null;
+        public const int BUFFER_SIZE = 2;
+        public byte[] buffer = new byte[BUFFER_SIZE];
     }
 
     class Session
