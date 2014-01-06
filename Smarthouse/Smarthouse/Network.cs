@@ -11,21 +11,19 @@ using System.Collections.Concurrent;
 
 namespace Smarthouse
 {
+
     class Network : ThreadControllable
     {
-
         const byte append_length = 4;//uint - 32 bytes
         const byte md5_length = 32;// md5 hash is always 32 symbols length
 
-
         bool isWorking = false;
-
         bool server;
         IPAddress server_ip;
         int port;
+        ConcurrentDictionary<string, Session> sessions = new ConcurrentDictionary<string, Session>();
 
         #region Server
-        ConcurrentDictionary<string, Session> sessions = new ConcurrentDictionary<string, Session>();
         Random rnd;
         Socket reciever;
         public Network(int port)
@@ -46,55 +44,61 @@ namespace Smarthouse
             #region authorization
             if (auth(sck, out login))
             {
-                // Console.WriteLine("+ "+login + " acces granted!");
-                Program.core.ud.GetUser(login).Status = (byte)UserDomain.Statuses.Net;
+                server_process_accepted(login);//do on acceptance
             }
             else
             {
-                //Console.WriteLine("+ " +login + " wrong password or already connected!");
                 sck.Disconnect(false);
                 sck.Close();//reject this user
                 return;
             }
             #endregion
-            server_process_accepted(login);//do on acceptance
+
         }
+
         #region Auth
         bool auth(Socket sck, out string login)
         {
             User user;
-            bool success = false; ;
+            bool success = false;
             login = recieveLogin(sck);
             uint append = (uint)(rnd.Next(int.MinValue, int.MaxValue) + int.MaxValue);  // Generate append 
 
 
             if (Smarthouse.Program.core.ud.Contains(login)) //if there is such user
             {
-                user = Smarthouse.Program.core.ud.GetUser(login);
+                user = Program.core.ud.GetUser(login);
                 sendAppend(sck, append);                           //send append
                 success = check(sck, Crypt.generateCheckKey(user.Pass, append)); // check key
                 if (success)
                 {
                     #region Adding login to the sessions
-                    if (!sessions.TryAdd(login, new Session(append, sck, new Crypt(append, user.Pass))))
+                    if (sessions.TryAdd(login, new Session(append, sck, user.Pass)))
                     {
-                        //Console.WriteLine("+_______ Error! \"" + login + "\" is already on the session list.");
+                        user.Status = (byte)UserDomain.Statuses.Net;
+                        success = true;
+                    }
+                    else
+                    {
+                        Console.WriteLine("Error! \"" + login + "\" is already on the session list.");
                         success = false;
                     }
                     #endregion
                 }
                 else
                 {
-                    //Console.WriteLine("+_______ Error! \"" + login + "\" wrong password.");
+                    Console.WriteLine("Error! \"" + login + "\" wrong password.");
+                    success = false;
                 }
             }
             else
             {
-                //Console.WriteLine("+_______ Error! No user named \"" + login + "\"");
+                Console.WriteLine("Error! No user named \"" + login + "\"");
                 success = false;
             }
             return success;
         }
+
         string recieveLogin(Socket sck)
         {
             byte[] length = new byte[1];
@@ -115,49 +119,53 @@ namespace Smarthouse
         }
         #endregion
         #endregion
+
+
+
+
+
+
+
+
+
+
         #region Client
-        Socket sck_client;
-        string login_client;
-        Crypt crypt_client;
-        uint append_client;
-        string client_password;
+        string login;
+        string password;
         public Network(string ip, int port, string login, string password)
         {
             server = false;
             server_ip = IPAddress.Parse(ip);
-            client_password = password;
+            this.password = password;
             this.port = port;
-            login_client = login;
-            sck_client = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+            this.login = login;
+            reciever = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
 
         }
         void endConnect(System.IAsyncResult ar)
         {
-            sck_client.EndConnect(ar);
-            //authorization
-
-            if (auth(login_client) && sck_client.Connected == true)
+            reciever.EndConnect(ar);
+            #region Authorization
+            if (auth(reciever) && reciever.Connected == true)
             {
-                //Console.WriteLine("- " + login_client + " connected!");
+                client_process_accepted();
             }
             else
             {
-                // Console.WriteLine("- " + login_client + " failed!"); 
+                reciever.Close();
             }
-            client_process_accepted();
+            #endregion
         }
         #region Auth
-        bool auth(string login)
+        bool auth(Socket sck)
         {
             try
             {
-                sendLogin(sck_client, login);               //sending login
-                append_client = recieveAppend(sck_client);   //recieve append
-                crypt_client = new Crypt(append_client, client_password);//create Crypt object
-                sendCheckKey(sck_client, Crypt.generateCheckKey(client_password, append_client)); //send generated key
-
+                sendLogin(sck, login);               //sending login
+                uint append = recieveAppend(sck);   //recieve append
+                sessions.TryAdd(login, new Session(append, sck, password));//add session
+                sendCheckKey(sck, Crypt.generateCheckKey(password, append)); //send generated key
                 return true;
-
             }
             catch
             {
@@ -218,7 +226,7 @@ namespace Smarthouse
             }
             else
             {
-                client_process_recieved(service, crypt_client.Decode(buff));
+                client_process_recieved(service, sessions[login].Crypt.Decode(buff));
             }
 
             so.workSocket.BeginReceive(so.buffer, 0, StateObject.BUFFER_SIZE, SocketFlags.None, EndRecieve, so); //вылетает ошибка при обрывании коннекта
@@ -239,16 +247,16 @@ namespace Smarthouse
         }
         void client_process_accepted()
         {
-            Console.WriteLine(login_client);
-            Console.WriteLine(crypt_client.key);
+            Console.WriteLine(login);
+            Console.WriteLine(sessions[login].Crypt.key);
             Console.WriteLine("______________");
             #region Begin recieve
             StateObject so = new StateObject();
-            so.workSocket = sck_client;
-            sck_client.BeginReceive(so.buffer, 0, StateObject.BUFFER_SIZE, SocketFlags.None, EndRecieve, so);
+            so.workSocket = sessions[login].Sck;
+            sessions[login].Sck.BeginReceive(so.buffer, 0, StateObject.BUFFER_SIZE, SocketFlags.None, EndRecieve, so);
             #endregion
 
-            Send(sck_client, crypt_client, 23, Encoding.UTF8.GetBytes("Sup"));
+            Send(sessions[login].Sck, sessions[login].Crypt, 23, Encoding.UTF8.GetBytes("Sup"));
         }
 
 
@@ -274,7 +282,7 @@ namespace Smarthouse
                 }
                 else
                 {
-                    sck_client.BeginConnect(server_ip, port, endConnect, null);
+                    reciever.BeginConnect(server_ip, port, endConnect, null);
                 }
             }
         }
@@ -302,22 +310,17 @@ namespace Smarthouse
 
     class Session
     {
-        uint append;
         public Socket Sck;
         public Crypt Crypt;
-
         public Session()
         {
-            append = 0;
             Crypt = null;
             Sck = null;
         }
-
-        public Session(uint append, Socket sck, Crypt crypt)
+        public Session(uint append, Socket sck, string password)
         {
-            this.append = append;
             Sck = sck;
-            Crypt = crypt;
+            Crypt = new Crypt(append, password);
         }
 
     }
