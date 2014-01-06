@@ -24,12 +24,10 @@ namespace Smarthouse
         IPAddress server_ip;
         int port;
 
-
         #region Server
         ConcurrentDictionary<string, Session> sessions = new ConcurrentDictionary<string, Session>();
         Random rnd;
         Socket reciever;
-
         public Network(int port)
         {
             rnd = new Random();
@@ -59,18 +57,8 @@ namespace Smarthouse
                 return;
             }
             #endregion
-            Console.WriteLine(login + " connected");
-            Console.WriteLine(sessions[login].Crypt.key);
-            Console.WriteLine("______________");
-
-            #region Begin recieve
-            StateObject so = new StateObject();
-            so.workSocket = sck;
-            sck.BeginReceive(so.buffer, 0, StateObject.BUFFER_SIZE, SocketFlags.None, EndRecieve, so);
-            #endregion
+            server_process_accepted(login);//do on acceptance
         }
-
-
         #region Auth
         bool auth(Socket sck, out string login)
         {
@@ -126,10 +114,6 @@ namespace Smarthouse
             return Encoding.UTF8.GetString(recieved_check_key) == check_key;
         }
         #endregion
-        void server_process_recieved(UInt16 service, byte[] buff)
-        {
-            Console.WriteLine("Server recieved '" + Encoding.UTF8.GetString(buff) + "' for " + service + " service");
-        }
         #endregion
         #region Client
         Socket sck_client;
@@ -160,18 +144,8 @@ namespace Smarthouse
             {
                 // Console.WriteLine("- " + login_client + " failed!"); 
             }
-
-            Console.WriteLine(login_client);
-            Console.WriteLine(crypt_client.key);
-            Console.WriteLine("______________");
-            #region Begin recieve
-            StateObject so = new StateObject();
-            so.workSocket = sck_client;
-            sck_client.BeginReceive(so.buffer, 0, StateObject.BUFFER_SIZE, SocketFlags.None, EndRecieve, so);
-            #endregion
+            client_process_accepted();
         }
-
-
         #region Auth
         bool auth(string login)
         {
@@ -208,11 +182,6 @@ namespace Smarthouse
             sck.Send(Encoding.UTF8.GetBytes(checkkey));//sending check key
         }
         #endregion
-
-        void client_process_recieved(UInt16 service, byte[] buff)
-        {
-            Console.WriteLine("Client recieved: '" + Encoding.UTF8.GetString(buff) + "' from " + service + " service");
-        }
         #endregion
 
         public bool Send(Socket sck, Crypt crypt, UInt16 service, byte[] buff)
@@ -231,7 +200,6 @@ namespace Smarthouse
                 return false;
             }
         }
-
         void EndRecieve(System.IAsyncResult ar)
         {
             #region buffwork
@@ -246,14 +214,51 @@ namespace Smarthouse
 
             if (server)
             {
-                server_process_recieved(service,buff);
+                server_process_recieved(service, sessions[so.fromuser].Crypt.Decode(buff), so.fromuser);
             }
             else
             {
-                client_process_recieved(service, buff);
+                client_process_recieved(service, crypt_client.Decode(buff));
             }
 
             so.workSocket.BeginReceive(so.buffer, 0, StateObject.BUFFER_SIZE, SocketFlags.None, EndRecieve, so); //вылетает ошибка при обрывании коннекта
+        }
+
+
+        void server_process_accepted(string login)
+        {
+            Console.WriteLine(login + " connected");
+            Console.WriteLine(sessions[login].Crypt.key);
+            Console.WriteLine("______________");
+            #region Begin recieve
+            StateObject so = new StateObject();
+            so.workSocket = sessions[login].Sck;
+            so.fromuser = login;
+            sessions[login].Sck.BeginReceive(so.buffer, 0, StateObject.BUFFER_SIZE, SocketFlags.None, EndRecieve, so);
+            #endregion
+        }
+        void client_process_accepted()
+        {
+            Console.WriteLine(login_client);
+            Console.WriteLine(crypt_client.key);
+            Console.WriteLine("______________");
+            #region Begin recieve
+            StateObject so = new StateObject();
+            so.workSocket = sck_client;
+            sck_client.BeginReceive(so.buffer, 0, StateObject.BUFFER_SIZE, SocketFlags.None, EndRecieve, so);
+            #endregion
+
+            Send(sck_client, crypt_client, 23, Encoding.UTF8.GetBytes("Sup"));
+        }
+
+
+        void server_process_recieved(UInt16 service, byte[] buff, string fromuser)
+        {
+            Console.WriteLine("Server recieved '" + Encoding.UTF8.GetString(buff) + "' for " + service + " service from: '" + fromuser);
+        }
+        void client_process_recieved(UInt16 service, byte[] buff)
+        {
+            Console.WriteLine("Client recieved: '" + Encoding.UTF8.GetString(buff) + "' from " + service + " service");
         }
 
 
@@ -291,6 +296,7 @@ namespace Smarthouse
     {
         public Socket workSocket = null;
         public const int BUFFER_SIZE = 5; //3 bytes for size and 2 bytes for service num
+        public string fromuser = null;
         public byte[] buffer = new byte[BUFFER_SIZE];
     }
 
