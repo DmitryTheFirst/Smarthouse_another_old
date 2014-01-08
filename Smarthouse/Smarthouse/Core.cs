@@ -36,8 +36,8 @@ namespace Smarthouse
             //Download smth from cfgs
             //Init other classes 
             test = new Test();
-            client1 = new Network("127.0.0.1", 31337, "Smirnyaga", "hard_pass");
-            client2 = new Network("127.0.0.1", 31337, "stranger", "12345");
+            client1 = new Network("192.168.0.8", 31337, "Smirnyaga", "hard_pass");
+            client2 = new Network("192.168.0.8", 31337, "stranger", "12345");
 
             server = new Network(31337);
 

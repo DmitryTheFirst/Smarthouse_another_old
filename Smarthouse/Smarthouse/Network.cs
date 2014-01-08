@@ -117,16 +117,13 @@ namespace Smarthouse
             sck.Receive(recieved_check_key);
             return Encoding.UTF8.GetString(recieved_check_key) == check_key;
         }
+        void sendIV(Socket sck, )
+        {
+            
+            sck.Send(aes.IV);//sending login
+        }
         #endregion
         #endregion
-
-
-
-
-
-
-
-
 
 
         #region Client
@@ -182,12 +179,18 @@ namespace Smarthouse
         uint recieveAppend(Socket sck)
         {
             byte[] append_buff = new byte[append_length];
-            sck.Receive(append_buff);//recieving login
+            sck.Receive(append_buff);//recieving append
             return BitConverter.ToUInt32(append_buff, 0);
         }
         void sendCheckKey(Socket sck, string checkkey)
         {
             sck.Send(Encoding.UTF8.GetBytes(checkkey));//sending check key
+        }
+        uint recieveIV(Socket sck)
+        {
+            byte[] IV_buff = new byte[IV_length];
+            sck.Receive(IV_buff);//recieving login
+            return
         }
         #endregion
         #endregion
@@ -213,11 +216,20 @@ namespace Smarthouse
             #region buffwork
             StateObject so = (StateObject)ar.AsyncState;
             byte[] size_buff = new byte[3];
-            Array.Copy(so.buffer, size_buff, 3);
-            int size = BitConverter.ToUInt16(so.buffer, 0);//getting size
-            byte[] buff = new byte[size];
+            byte[] recieve_buff;
+            if (server)
+            {
+                recieve_buff = sessions[so.fromuser].Crypt.Decode(so.buffer);
+            }
+            else
+            {
+                recieve_buff = sessions[login].Crypt.Decode(so.buffer);
+            }
+            Array.Copy(recieve_buff, size_buff, 3);
+            int size = BitConverter.ToUInt16(recieve_buff, 0);//getting size
+            byte[] buff = new byte[size + Crypt.md5_length];
             #endregion
-            UInt16 service = BitConverter.ToUInt16(so.buffer, 3);//getting service num
+            UInt16 service = BitConverter.ToUInt16(recieve_buff, 3);//getting service num
             so.workSocket.Receive(buff);//recieving data
 
             if (server)
@@ -236,8 +248,6 @@ namespace Smarthouse
         void server_process_accepted(string login)
         {
             Console.WriteLine(login + " connected");
-            Console.WriteLine(sessions[login].Crypt.key);
-            Console.WriteLine("______________");
             #region Begin recieve
             StateObject so = new StateObject();
             so.workSocket = sessions[login].Sck;
@@ -248,25 +258,37 @@ namespace Smarthouse
         void client_process_accepted()
         {
             Console.WriteLine(login);
-            Console.WriteLine(sessions[login].Crypt.key);
-            Console.WriteLine("______________");
             #region Begin recieve
             StateObject so = new StateObject();
             so.workSocket = sessions[login].Sck;
             sessions[login].Sck.BeginReceive(so.buffer, 0, StateObject.BUFFER_SIZE, SocketFlags.None, EndRecieve, so);
             #endregion
 
-            Send(sessions[login].Sck, sessions[login].Crypt, 23, Encoding.UTF8.GetBytes("Sup"));
+            Send(sessions[login].Sck, sessions[login].Crypt, 513, Encoding.UTF8.GetBytes("looong looong teest!"));
         }
 
 
         void server_process_recieved(UInt16 service, byte[] buff, string fromuser)
         {
-            Console.WriteLine("Server recieved '" + Encoding.UTF8.GetString(buff) + "' for " + service + " service from: '" + fromuser);
+            if (buff != null)
+            {
+                Console.WriteLine("Server recieved '" + Encoding.UTF8.GetString(buff) + "' for " + service + " service from: '" + fromuser);
+            }
+            else
+            {
+                Console.WriteLine("Packet error");
+            }
         }
         void client_process_recieved(UInt16 service, byte[] buff)
         {
-            Console.WriteLine("Client recieved: '" + Encoding.UTF8.GetString(buff) + "' from " + service + " service");
+            if (buff != null)
+            {
+                Console.WriteLine("Client recieved: '" + Encoding.UTF8.GetString(buff) + "' from " + service + " service");
+            }
+            else
+            {
+                Console.WriteLine("Packet error");
+            }
         }
 
 
@@ -303,7 +325,7 @@ namespace Smarthouse
     class StateObject
     {
         public Socket workSocket = null;
-        public const int BUFFER_SIZE = 5; //3 bytes for size and 2 bytes for service num
+        public const int BUFFER_SIZE = 5 + Crypt.md5_length; //3 bytes for size and 2 bytes for service num + md5 length == 21
         public string fromuser = null;
         public byte[] buffer = new byte[BUFFER_SIZE];
     }
